@@ -1,153 +1,102 @@
-# Прикрутить бота к задачам с предыдущего семинара:
+import telebot, emoji, time
+from telebot import types
 
-# Создать калькулятор для работы с рациональными и комплексными
-# числами, организовать меню, добавив в неё систему логирования
+bot = telebot.TeleBot('5688493072:AAFpgPLPRZKJ9VxiAqCSXu5S8IJ2CXHKycE')
 
-# Создать телефонный справочник с возможностью импорта и экспорта
-# данных в нескольких форматах.
-
-
-
-
-from telebot import TeleBot, types
-import emoji
-
+with open('project_bot/logfile.txt', 'a', encoding="utf-8") as f_log:
+    local_time = time.ctime(time.time()).split()[3]
+    print(local_time, 'Бот запущен', file=f_log)
  
-bot = TeleBot('5688493072:AAFpgPLPRZKJ9VxiAqCSXu5S8IJ2CXHKycE')
+def do_log(message, user_id):
+    with open('project_bot/logfile.txt', 'a', encoding="utf-8") as f_log:
+        local_time = time.ctime(time.time()).split()[3]
+        print(local_time, f'Пользователь ({user_id}) выполнил операцию: {message}', file=f_log)
+ 
+
+value = ''
+old_value = ''
+user_id = ''
+
+keyboard = telebot.types.InlineKeyboardMarkup()
+keyboard.row(telebot.types.InlineKeyboardButton('C', callback_data='C'),
+             telebot.types.InlineKeyboardButton('<=', callback_data='<='),
+             telebot.types.InlineKeyboardButton('/', callback_data='/'),
+             telebot.types.InlineKeyboardButton('*', callback_data='*')
+             )
+
+keyboard.row(telebot.types.InlineKeyboardButton('7', callback_data='7'),
+             telebot.types.InlineKeyboardButton('8', callback_data='8'),
+             telebot.types.InlineKeyboardButton('9', callback_data='9'),
+             telebot.types.InlineKeyboardButton('-', callback_data='-')
+             )
+
+keyboard.row(telebot.types.InlineKeyboardButton('4', callback_data='4'),
+             telebot.types.InlineKeyboardButton('5', callback_data='5'),
+             telebot.types.InlineKeyboardButton('6', callback_data='6'),
+             telebot.types.InlineKeyboardButton('+', callback_data='+')
+             )
+
+keyboard.row(telebot.types.InlineKeyboardButton('1', callback_data='1'),
+             telebot.types.InlineKeyboardButton('2', callback_data='2'),
+             telebot.types.InlineKeyboardButton('3', callback_data='3'),
+             telebot.types.InlineKeyboardButton(',', callback_data='.')
+             )
+
+keyboard.row(telebot.types.InlineKeyboardButton('(', callback_data='('),
+             telebot.types.InlineKeyboardButton('0', callback_data='0'),
+             telebot.types.InlineKeyboardButton(')', callback_data=')'),
+             telebot.types.InlineKeyboardButton('=', callback_data='=')
+             )
 
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    calc = types.KeyboardButton(f'Калькулятор {emoji.emojize(":abacus:")}')
-    telephone_directory = types.KeyboardButton(f'Cправочник {emoji.emojize(":telephone:")}')
-    markup.add(calc, telephone_directory)
+@bot.message_handler(commands = ['start'] )
+def getmessage(message):
     bot.send_message(message.chat.id, f'{message.from_user.first_name}, '
-                    'приветствую тебя! Я тестовый бот и могу выполнять только '
-                    f'2 операции, предствленные ниже, выбери же одну из них {emoji.emojize(":anxious_face_with_sweat:")}', 
-                    reply_markup=markup)
+                    'приветствую тебя! Я тестовый бот-аля калькулятор и могу выполнять различные '
+                    f'арифметические операции, приступим? {emoji.emojize(":anxious_face_with_sweat:")}'
+                    )
 
+    global user_id
+    user_id = message.from_user.id
+    if value == '':
+        bot.send_message(message.from_user.id, "Well, let's start counting?", reply_markup=keyboard)
+    else:
+        bot.send_message(message.from_user.id, value, reply_markup=keyboard)
 
+@bot.callback_query_handler(func=lambda call: True)
+def callback_func(query):
+    global value, old_value
+    data = query.data
 
-# @bot.message_handler(commands=['start'])
-# def start(message):
-#     user_hello = f'Добро пожаловать, {message.from_user.first_name} !' 
-#     bot.send_message(message.chat.id, user_hello)
+    if data == 'C':
+        value = ''
+    elif data == '(':
+        value = '(' + value
+    elif data == ')':
+        value = value + ')' 
+    elif data == '<=':
+        value = value[:-1]
+    elif data == '=':
+        try:
+            arithmetic_expression = value
+            value = str(eval(value))
+            arithmetic_expression += f' = {value}'
+        except:
+            value = 'Ошибка!'
+            arithmetic_expression += f' = {value}'
+        finally:
+            do_log(arithmetic_expression, user_id)
+    else:
+        if data in '+-/*': value += f' {data} '
+        else: value += data
 
+    if value != old_value:
+        if value == '':
+            bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, text="0", reply_markup=keyboard)
+        else:
+            bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, text=value, reply_markup=keyboard)
 
-@bot.message_handler(content_types=['text'])
-def get_user_txt(message):
-    if message.text == f'Калькулятор {emoji.emojize(":abacus:")}':
-        bot.send_message(message.chat.id, 'Calc')
-    elif message.text == f'Cправочник {emoji.emojize(":telephone:")}':
-        bot.send_message(message.chat.id, 'Phone')
-    else: bot.send_message(message.chat.id, emoji.emojize(":face_with_raised_eyebrow:"))
+    old_value = value
+    if value == 'Ошибка!': value = ''
 
-
-bot.polling()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
- 
-# def summator(text):
-#     lst = text.split()
-#     if len(lst) == 2 and lst[0].isdigit() and lst[1].isdigit():
-#         return str(int(lst[0]) + int(lst[1]))
-#     return 'Это некорректный запрос'
- 
- 
-# @bot.message_handler(commands=['log'])
-# def hello(msg: telebot.types.Message):
-#     bot.send_message(chat_id=msg.from_user.id,
-#                      text='Лог программы\newcoiywgecowegcouwefoyewfov')
-#     bot.send_document(chat_id=msg.from_user.id, document=open('TestBot.log', 'rb'))
- 
- 
-# @bot.message_handler(content_types=['document'])
-# def hello(msg: telebot.types.Message):
-#     file = bot.get_file(msg.document.file_id)
-#     downloaded_file = bot.download_file(file.file_path)
-#     with open(msg.document.file_name, 'wb') as f_out:
-#         f_out.write(downloaded_file)
- 
- 
-# @bot.message_handler(commands=['help'])
-# def help_command(msg: telebot.types.Message):
-#     bot.send_message(chat_id=msg.from_user.id, text="Справка")
- 
- 
-# @bot.message_handler(commands=['summator'])
-# def help_command(msg: telebot.types.Message):
-#     bot.send_message(chat_id=msg.from_user.id, text="Введите числа через пробел")
-#     bot.register_next_step_handler(callback=sum_items, message=msg)
- 
-# def sum_items(msg: telebot.types.Message):
-#     bot.send_message(chat_id=msg.from_user.id, text=summator(msg.text))
- 
- 
-# @bot.message_handler()
-# def echo(msg: telebot.types.Message):
-#     bot.send_message(chat_id=msg.from_user.id, text="Вы ввели:")
- 
- 
-# bot.polling()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# from telebot import TeleBot
-
-# bot = TeleBot('5688493072:AAFpgPLPRZKJ9VxiAqCSXu5S8IJ2CXHKycE')
-
-# def summato_(text):
-#     lst = text.split()
-#     if len(lst) == 2 and lst[0].isdigit() and lst[1].isdigit():
-#         return str(int(lst[0]) + int(lst[1]))
-#     else: return 'Invalid sintaxis'
-
-
-# @bot.message_handler()
-# def echo(msg):
-#     bot.send_message(chat_id=msg.from_user.id, text=f'Вы прислалииииии: {summato_(msg.text)}')
-
-# bot.polling()
+bot.polling(none_stop=False, interval=0)
