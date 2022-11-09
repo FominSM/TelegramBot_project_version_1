@@ -1,7 +1,7 @@
 import telebot, emoji, time
 from telebot import types
 
-bot = telebot.TeleBot('5688493072:AAFpgPLPRZKJ9VxiAqCSXu5S8IJ2CXHKycE')
+bot = telebot.TeleBot('Your TOKEN')
 
 with open('project_bot/logfile.txt', 'a', encoding="utf-8") as f_log:
     local_time = time.ctime(time.time()).split()[3]
@@ -48,12 +48,18 @@ keyboard.row(telebot.types.InlineKeyboardButton('(', callback_data='('),
              telebot.types.InlineKeyboardButton('=', callback_data='=')
              )
 
+keyboard.row(telebot.types.InlineKeyboardButton('J', callback_data='J'))
 
 @bot.message_handler(commands = ['start'] )
 def getmessage(message):
     bot.send_message(message.chat.id, f'{message.from_user.first_name}, '
                     'приветствую тебя! Я тестовый бот-аля калькулятор и могу выполнять различные '
-                    f'арифметические операции, приступим? {emoji.emojize(":anxious_face_with_sweat:")}'
+                    f'арифметические операции, как с рациональными числами, '
+                    'так и с комплексными, если про существование вторых услышал только сейчас, '
+                    f'то лучше ознакомься с тем, что это такое и с чем их едят, после этого '
+                    'ты поймешь зачем в калькуляторе кнопка "J", и не в коем случае не пиши мне '
+                    f'в личные сообщения, все понял? приступим? {emoji.emojize(":anxious_face_with_sweat:")}'
+                    f'{emoji.emojize(":backhand_index_pointing_down:")}'
                     )
 
     global user_id
@@ -68,14 +74,10 @@ def callback_func(query):
     global value, old_value
     data = query.data
 
-    if data == 'C':
-        value = ''
-    elif data == '(':
-        value = '(' + value
-    elif data == ')':
-        value = value + ')' 
-    elif data == '<=':
-        value = value[:-1]
+    if data == 'C': value = ''
+    elif data == '(': value += '(' 
+    elif data == ')': value +=')' 
+    elif data == '<=': value = value[:-1]
     elif data == '=':
         try:
             arithmetic_expression = value
@@ -91,12 +93,18 @@ def callback_func(query):
         else: value += data
 
     if value != old_value:
-        if value == '':
-            bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, text="0", reply_markup=keyboard)
-        else:
-            bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, text=value, reply_markup=keyboard)
+        if value == '': bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, 
+                                              text="0", reply_markup=keyboard)
+        else: bot.edit_message_text(chat_id=query.message.chat.id, message_id=query.message.message_id, 
+                                    text=value, reply_markup=keyboard)
 
     old_value = value
     if value == 'Ошибка!': value = ''
+
+
+@bot.message_handler()
+def ge(message):
+    bot.send_message(message.chat.id, f'{message.from_user.first_name}, '
+                    f'работой строго с красивыми кнопками, бро {emoji.emojize(":face_with_symbols_on_mouth:")}')
 
 bot.polling(none_stop=False, interval=0)
